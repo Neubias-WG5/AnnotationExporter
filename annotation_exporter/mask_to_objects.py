@@ -1,17 +1,21 @@
 # -*- coding: utf-8 -*-
-from functools import partial
 from warnings import warn
 
 import cv2
 import numpy as np
 from shapely.geometry import Polygon, MultiPolygon
 from shapely.validation import explain_validity
-from shapely.affinity import affine_transform as aff_transfo
+from shapely.affinity import affine_transform
 from skimage.measure import points_in_poly, label as label_fn
 
 
 class AnnotationSlice(object):
-    """Represent a slice of an object"""
+    """Represent a 2D slice of an object:
+        - polygon encoding the shape
+        - label of the object
+        - time index (if relevant)
+        - depth index (if relevant)
+    """
     def __init__(self, polygon, label, time=None, depth=None):
         self._polygon = polygon
         self._label = label
@@ -33,35 +37,6 @@ class AnnotationSlice(object):
     @property
     def depth(self):
         return self._depth
-
-
-def affine_transform(xx_coef=1, xy_coef=0, yx_coef=0, yy_coef=1,
-                     delta_x=0, delta_y=0):
-    """
-    Represents a 2D affine transformation:
-    x' = xx_coef * x + xy_coef * y + delta_x
-    y' = yx_coef * x + yy_coef * y + delta_y
-    Constructor parameters
-    ----------------------
-    xx_coef: float (default: 1)
-        The x from x coefficient
-    xy_coef: float (default: 0)
-        The x from y coefficient
-    yx_coef: float (default: 0)
-        The y from x coefficient
-    yy_coef: float (default: 1)
-        The y from y coefficient
-    delta_x: float (default: 0)
-        The translation over x-axis
-    delta_y: float (default: 0)
-        The translation over y-axis
-    Return
-    ------
-    affine_transformer : callable: shapely.Geometry => shapely.Geometry
-        The function representing the 2D affine transformation
-    """
-    return partial(aff_transfo, matrix=[xx_coef, xy_coef, yx_coef, yy_coef,
-                                        delta_x, delta_y])
 
 
 def identity(x):
@@ -136,7 +111,7 @@ def _locate(segmented, offset=None):
     transform = identity
     if offset is not None:
         col_off, row_off = offset
-        transform = affine_transform(delta_x=col_off, delta_y=row_off)
+        transform = lambda p: affine_transform(p, [col_off, 0, 0, row_off, 0, 0])
     components = []
     if len(contours) > 0:
         top_index = 0
