@@ -209,7 +209,7 @@ def mask_to_objects_2d(mask, background=0, offset=None):
     Returns
     -------
     extracted: list of AnnotationSlice
-        Each object slice represent an object from the image. Fields time and depth of ObjectSlice are set to None.
+        Each object slice represent an object from the image. Fields time and depth of AnnotationSlice are set to None.
 
     Notes
     -----
@@ -225,8 +225,10 @@ def mask_to_objects_2d(mask, background=0, offset=None):
     polygons = _locate(mask_cpy, offset=offset)
     objects = list()
     for polygon in polygons:
-        x, y = get_polygon_inner_point(polygon)
-        objects.append(AnnotationSlice(polygon=polygon, label=mask[y, x]))
+        # loop for handling multipart geometries
+        for curr in polygon.geoms if hasattr(polygon, "geoms") else [polygon]:
+            x, y = get_polygon_inner_point(curr)
+            objects.append(AnnotationSlice(polygon=curr, label=mask[y, x]))
     return objects
 
 
@@ -249,8 +251,8 @@ def mask_to_objects_3d(mask, background=0, offset=None, assume_unique_labels=Fal
     -------
     objects: list
         Lists all the extracted objects. Each object is provided as a list of slices (i.e. python object of type
-        ObjectSlice). A slice consists of a 2D polygon, a label and the depth or time at which it was taken.
-        If time is True, the field depth of ObjectSlice is set to None. Otherwise, the field time is set to None.
+        AnnotationSlice). A slice consists of a 2D polygon, a label and the depth or time at which it was taken.
+        If time is True, the field depth of AnnotationSlice is set to None. Otherwise, the field time is set to None.
     """
     if mask.ndim != 3:
         raise ValueError("Cannot handle image with ndim different from 3 ({} dim. given).".format(mask.ndim))
@@ -304,23 +306,23 @@ def mask_to_objects_3dt(mask, background=0, offset=None):
         [ # objects
             [ # timesteps (object 1)
                 [ # slices (object 1, timestep 1)
-                    ObjectSlice(P_1_1_1, t_1_1, s_1_1_1, label_1),
-                    ObjectSlice(P_1_1_2, t_1_1, s_1_1_2, label_1),
+                    AnnotationSlice(P_1_1_1, t_1_1, s_1_1_1, label_1),
+                    AnnotationSlice(P_1_1_2, t_1_1, s_1_1_2, label_1),
                  ...],
                 [ # slices (object 1, timestep 2)
-                    ObjectSlice(P_1_2_1, t_1_2, s_1_2_1, label_1),
-                    ObjectSlice(P_1_2_2, t_1_2, s_1_2_2, label_1),
+                    AnnotationSlice(P_1_2_1, t_1_2, s_1_2_1, label_1),
+                    AnnotationSlice(P_1_2_2, t_1_2, s_1_2_2, label_1),
                  ...],
                 ...
             ],
             [ # timesteps (object 2)
                 [ # slices (object 2, timestep 1)
-                    ObjectSlice(P_2_1_1, t_2_1, s_2_1_1, label_2),
-                    ObjectSlice(P_2_1_2, t_2_1, s_2_1_2, label_2),
+                    AnnotationSlice(P_2_1_1, t_2_1, s_2_1_1, label_2),
+                    AnnotationSlice(P_2_1_2, t_2_1, s_2_1_2, label_2),
                  ...],
                 [ # slices (object 2, timestep 2)
-                    ObjectSlice(P_2_2_1, t_2_2, s_2_2_1, label_2),
-                    ObjectSlice(P_2_2_2, t_2_2, s_2_2_2, label_2),
+                    AnnotationSlice(P_2_2_1, t_2_2, s_2_2_1, label_2),
+                    AnnotationSlice(P_2_2_2, t_2_2, s_2_2_2, label_2),
                  ...],
                 ...
             ]

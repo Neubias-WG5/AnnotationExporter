@@ -1,6 +1,6 @@
 from .mask_to_objects import AnnotationSlice, mask_to_objects_2d, mask_to_objects_3d, mask_to_objects_3dt
 
-__version__ = "0.1"
+__version__ = "0.1.1"
 
 __all__ = [
     "AnnotationSlice", "mask_to_objects_3dt", "mask_to_objects_3d", "mask_to_objects_2d",
