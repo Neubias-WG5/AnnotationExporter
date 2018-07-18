@@ -1,8 +1,10 @@
-from unittest import TestCase
+from unittest import TestCase, skip
 
 import numpy as np
 from PIL.Image import fromarray
 from PIL.ImageDraw import ImageDraw
+from cv2 import imwrite
+
 from annotation_exporter import mask_to_objects_2d
 from shapely.geometry import Point, Polygon, box
 
@@ -83,3 +85,44 @@ class TestMaskToObject2D(TestCase):
         self.assertTrue(slices[0].polygon.equals(box(50, 150, 100, 200)), msg="Polygon is equal")
         self.assertEqual(slices[1].label, 127)
         self.assertTrue(slices[1].polygon.equals(box(105, 205, 155, 255)), msg="Polygon is equal")
+
+    def testMultipartPolygon(self):
+        image = np.zeros([300, 200], dtype=np.int)
+        image = draw_square_by_corner(image, 50, (150, 50), color=255)
+        image = draw_square_by_corner(image, 50, (201, 101), color=127)
+
+        slices = mask_to_objects_2d(image)
+        # sort by bounding box top left corner
+        slices = sorted(slices, key=lambda s: s.polygon.bounds[:2])
+
+        self.assertEqual(len(slices), 2)
+        self.assertEqual(slices[0].label, 255)
+        self.assertEqual(slices[1].label, 127)
+
+    def testAdjacentWithoutSeperation(self):
+        image = np.zeros([300, 200], dtype=np.int)
+        image = draw_square_by_corner(image, 50, (150, 50), color=255)
+        image = draw_square_by_corner(image, 50, (150, 101), color=127)
+
+        slices = mask_to_objects_2d(image)
+        # sort by bounding box top left corner
+        slices = sorted(slices, key=lambda s: s.polygon.bounds[:2])
+
+        self.assertEqual(len(slices), 2)
+        self.assertEqual(slices[0].label, 255)
+        self.assertEqual(slices[1].label, 127)
+
+    def testAdjacentWithSeparation(self):
+        image = np.zeros([300, 200], dtype=np.int)
+        image = draw_square_by_corner(image, 50, (150, 50), color=255)
+        image = draw_square_by_corner(image, 50, (150, 102), color=127)
+
+        slices = mask_to_objects_2d(image)
+        # sort by bounding box top left corner
+        slices = sorted(slices, key=lambda s: s.polygon.bounds[:2])
+
+        self.assertEqual(len(slices), 2)
+        self.assertEqual(slices[0].label, 255)
+        self.assertTrue(slices[0].polygon.equals(box(50, 150, 100, 200)), msg="Polygon is equal")
+        self.assertEqual(slices[1].label, 127)
+        self.assertTrue(slices[1].polygon.equals(box(102, 150, 152, 200)), msg="Polygon is equal")

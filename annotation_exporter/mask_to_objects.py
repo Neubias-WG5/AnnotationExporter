@@ -7,6 +7,7 @@ from shapely.geometry import Polygon, MultiPolygon
 from shapely.validation import explain_validity
 from shapely.affinity import affine_transform
 from skimage.measure import points_in_poly, label as label_fn
+from skimage.morphology import dilation, square, erosion
 
 
 class AnnotationSlice(object):
@@ -210,11 +211,6 @@ def mask_to_objects_2d(mask, background=0, offset=None):
     -------
     extracted: list of AnnotationSlice
         Each object slice represent an object from the image. Fields time and depth of AnnotationSlice are set to None.
-
-    Notes
-    -----
-    Adjacent but distinct polygons must be separated by at least one line of background (e.g. value 0) pixels.
-    The mask array is not modified by the function.
     """
     if mask.ndim != 2:
         raise ValueError("Cannot handle image with ndim different from 2 ({} dim. given).".format(mask.ndim))
@@ -222,7 +218,9 @@ def mask_to_objects_2d(mask, background=0, offset=None):
         offset = (0, 0)
     # opencv only supports contour extraction for binary masks
     mask_cpy = np.zeros(mask.shape, dtype=np.uint8)
+    contours = dilation(mask, square(3)) - mask
     mask_cpy[mask != background] = 255
+    mask_cpy[np.logical_and(contours > 0, mask > 0)] = background
     # extract polygons and labels
     polygons = _locate(mask_cpy, offset=offset)
     objects = list()
