@@ -135,7 +135,7 @@ def _locate(segmented, offset=None):
                         subs_remaining = False
 
             # add component tuple to components only if exterior is a polygon
-            if len(exterior) > 3:
+            if len(exterior) > 2:
                 polygon = Polygon(exterior, interiors)
                 polygon = transform(polygon)
                 if polygon.is_valid:  # some polygons might be invalid
@@ -216,10 +216,11 @@ def mask_to_objects_2d(mask, background=0, offset=None):
         raise ValueError("Cannot handle image with ndim different from 2 ({} dim. given).".format(mask.ndim))
     if offset is None:
         offset = (0, 0)
-    # opencv only supports contour extraction for binary masks
+    # opencv only supports contour extraction for binary masks: clean mask and binarize
     mask_cpy = np.zeros(mask.shape, dtype=np.uint8)
-    contours = dilation(mask, square(3)) - mask
     mask_cpy[mask != background] = 255
+    # create artificial separation between adjacent touching each other
+    contours = dilation(mask, square(3)) - mask
     mask_cpy[np.logical_and(contours > 0, mask > 0)] = background
     # extract polygons and labels
     polygons = _locate(mask_cpy, offset=offset)
