@@ -111,7 +111,7 @@ def _locate(segmented, offset=None):
     transform = identity
     if offset is not None:
         col_off, row_off = offset
-        transform = lambda p: affine_transform(p, [col_off, 0, 0, row_off, 0, 0])
+        transform = lambda p: affine_transform(p, [1, 0, 0, 1, col_off, row_off])
     components = []
     if len(contours) > 0:
         top_index = 0
@@ -218,6 +218,8 @@ def mask_to_objects_2d(mask, background=0, offset=None):
     """
     if mask.ndim != 2:
         raise ValueError("Cannot handle image with ndim different from 2 ({} dim. given).".format(mask.ndim))
+    if offset is None:
+        offset = (0, 0)
     # opencv only supports contour extraction for binary masks
     mask_cpy = np.zeros(mask.shape, dtype=np.uint8)
     mask_cpy[mask != background] = 255
@@ -228,7 +230,7 @@ def mask_to_objects_2d(mask, background=0, offset=None):
         # loop for handling multipart geometries
         for curr in polygon.geoms if hasattr(polygon, "geoms") else [polygon]:
             x, y = get_polygon_inner_point(curr)
-            objects.append(AnnotationSlice(polygon=curr, label=mask[y, x]))
+            objects.append(AnnotationSlice(polygon=curr, label=mask[y - offset[1], x - offset[0]]))
     return objects
 
 
