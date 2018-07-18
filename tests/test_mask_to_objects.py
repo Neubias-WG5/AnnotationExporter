@@ -126,3 +126,17 @@ class TestMaskToObject2D(TestCase):
         self.assertTrue(slices[0].polygon.equals(box(50, 150, 100, 200)), msg="Polygon is equal")
         self.assertEqual(slices[1].label, 127)
         self.assertTrue(slices[1].polygon.equals(box(102, 150, 152, 200)), msg="Polygon is equal")
+
+    def testSmallObject(self):
+        image = np.zeros([100, 100], dtype=np.int)
+        image = draw_poly(image, Polygon([(15, 77), (15, 78), (16, 78), (15, 77)]), color=127)
+        image = draw_poly(image, box(1, 1, 2, 2), color=255)
+
+        imwrite("test.png", image)
+        slices = mask_to_objects_2d(image)
+        # sort by bounding box top left corner
+        slices = sorted(slices, key=lambda s: s.polygon.bounds[:2])
+
+        self.assertEqual(len(slices), 2)
+        self.assertEqual(slices[0].label, 255)
+        self.assertEqual(slices[1].label, 127)

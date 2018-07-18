@@ -177,12 +177,16 @@ def get_polygon_inner_point(polygon):
     point: tuple
         (x, y) coordinates for the found points. x and y are integers.
     """
+    # this function works whether or not the boundary is inside or outside (one pixel around) the
+    # object boundary in the mask
     exterior = polygon.exterior.coords
     for x, y in exterior:  # usually this function will return in one iteration
         neighbours = np.array(neighbour_pixels(int(x), int(y)))
         in_poly = np.array(points_in_poly(list(neighbours), exterior))
         if np.count_nonzero(in_poly) > 0:  # make sure at least one point is in the polygon
             return neighbours[in_poly][0]
+    if len(exterior) == 4:  # fallback for three pixel polygons
+        return [int(v) for v in exterior[0]]
     raise ValueError("No points could be found inside the polygon ({}) !".format(polygon.wkt))
 
 
