@@ -2,7 +2,7 @@ import numpy as np
 from shapely.geometry import Point, box
 
 from annotation_exporter import AnnotationSlice
-from export_util import draw_slice
+from annotation_exporter.export_util import draw_slice
 
 
 def mask_to_points_2d(mask, points=True):
