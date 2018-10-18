@@ -42,6 +42,7 @@ class TestCsvToPoints(TestCase):
             t_start, t_end = 3, 4 if has_t else 3
             file.write(sep.join([str(n) for n in first[:2] + first[z_start:z_end] + first[t_start:t_end]]) + "\n")
             file.write(sep.join([str(n) for n in second[:2] + second[z_start:z_end] + second[t_start:t_end]]) + "\n")
+            file.write("\n")
 
     def _asserts_for_tmp_file(self, slices):
         self.assertEqual(len(slices), 2)

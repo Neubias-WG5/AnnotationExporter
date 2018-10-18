@@ -51,6 +51,7 @@ def csv_to_points(filepath, sep='\t', parse_fn=None, has_z=False, has_t=False, h
         lines = file.readlines()
         headers_read = False
         for i, line in enumerate(lines):
+            line = line.strip()
             if len(line) == 0:  # skip header or empty line
                 continue
             if has_headers and not headers_read:
