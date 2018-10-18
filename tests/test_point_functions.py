@@ -46,11 +46,11 @@ class TestCsvToPoints(TestCase):
     def _asserts_for_tmp_file(self, slices):
         self.assertEqual(len(slices), 2)
 
-    def _generic_test(self, has_header=True, sep='\t', has_z=True, has_t=True):
+    def _generic_test(self, has_header=True, sep='\t', has_z=True, has_t=True, parse_fn=None):
         filepath = "./tmp.csv"
         try:
             self._create_file(filepath, header=has_header, sep=sep, has_t=has_t, has_z=has_z)
-            slices = csv_to_points(filepath, sep=sep, has_z=has_z, has_t=has_t, has_headers=has_header)
+            slices = csv_to_points(filepath, sep=sep, has_z=has_z, has_t=has_t, has_headers=has_header, parse_fn=parse_fn)
             self.assertIsInstance(slices[0].polygon, Point)
             self.assertAlmostEqual(slices[0].polygon.x, 1.25)
             self.assertAlmostEqual(slices[0].polygon.y, 25.36)
@@ -83,6 +83,8 @@ class TestCsvToPoints(TestCase):
         self._generic_test(has_header=False, sep=",", has_z=True, has_t=False)
         self._generic_test(has_header=False, sep="\t", has_z=False, has_t=True)
         self._generic_test(has_header=False, sep="\t", has_z=True, has_t=True)
+        self._generic_test(has_header=False, sep=",", has_z=True, has_t=True,
+                           parse_fn=lambda l, sep: [float(c) for c in l.split(sep)[:4]])
 
 
 class TestSliceToMask(TestCase):
