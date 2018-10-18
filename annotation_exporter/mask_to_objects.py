@@ -261,6 +261,8 @@ def mask_to_objects_3d(mask, background=0, offset=None, assume_unique_labels=Fal
     """
     if mask.ndim != 3:
         raise ValueError("Cannot handle image with ndim different from 3 ({} dim. given).".format(mask.ndim))
+    if offset is None:
+        offset = (0, 0, 0)
     label_img = mask if assume_unique_labels else label_fn(mask, connectivity=2, background=background)
     height, width, depth = label_img.shape
 
@@ -281,7 +283,7 @@ def mask_to_objects_3d(mask, background=0, offset=None, assume_unique_labels=Fal
                     time=d + offset_z if time else None
                 )
             ]
-    return objects.values()
+    return list(objects.values())
 
 
 def mask_to_objects_3dt(mask, background=0, offset=None):

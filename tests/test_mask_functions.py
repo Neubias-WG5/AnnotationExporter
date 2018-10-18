@@ -2,7 +2,7 @@ from unittest import TestCase
 
 import numpy as np
 
-from annotation_exporter import mask_to_objects_2d
+from annotation_exporter import mask_to_objects_2d, mask_to_objects_3d
 from shapely.geometry import Polygon, box
 
 from tests.util import draw_square_by_corner, draw_poly
@@ -97,3 +97,30 @@ class TestMaskToObject2D(TestCase):
         self.assertEqual(len(slices), 2)
         self.assertEqual(slices[0].label, 255)
         self.assertEqual(slices[1].label, 127)
+
+
+class TestMaskToObject3D(TestCase):
+    def testTwoObjectsOneSpanning(self):
+        image = np.zeros([100, 200, 3], dtype=np.uint8)
+        image[:, :, 0] = draw_square_by_corner(image[:, :, 0], 10, (5, 10), 100)
+        image[:, :, 1] = draw_square_by_corner(image[:, :, 1], 10, (5, 10), 100)
+        image[:, :, 2] = draw_square_by_corner(image[:, :, 2], 12, (5, 10), 100)
+        image[:, :, 1] = draw_square_by_corner(image[:, :, 1], 25, (45, 40), 200)
+        slices = mask_to_objects_3d(image, assume_unique_labels=True)
+
+        self.assertIsInstance(slices, list)
+        self.assertEqual(len(slices), 2, msg="found 2 objects")
+        self.assertEqual(len(slices[0]), 3)
+        self.assertEqual(slices[0][0].label, 100)
+        self.assertEqual(slices[0][0].depth, 0)
+        self.assertTrue(slices[0][0].polygon.equals(box(10, 5, 20, 15)))
+        self.assertEqual(slices[0][1].label, 100)
+        self.assertEqual(slices[0][1].depth, 1)
+        self.assertTrue(slices[0][1].polygon.equals(box(10, 5, 20, 15)))
+        self.assertEqual(slices[0][2].label, 100)
+        self.assertEqual(slices[0][2].depth, 2)
+        self.assertTrue(slices[0][2].polygon.equals(box(10, 5, 22, 17)))
+        self.assertEqual(len(slices[1]), 1)
+        self.assertEqual(slices[1][0].label, 200)
+        self.assertEqual(slices[1][0].depth, 1)
+        self.assertTrue(slices[1][0].polygon.equals(box(40, 45, 65, 70)))
