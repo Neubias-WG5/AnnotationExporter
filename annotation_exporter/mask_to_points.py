@@ -49,8 +49,12 @@ def csv_to_points(filepath, sep='\t', parse_fn=None, has_z=False, has_t=False, h
     points = list()
     with open(filepath, "r") as file:
         lines = file.readlines()
+        headers_read = False
         for i, line in enumerate(lines):
-            if len(line) == 0 or (has_headers and i == 0):  # skip header or empty line
+            if len(line) == 0:  # skip header or empty line
+                continue
+            if has_headers and not headers_read:
+                headers_read = True
                 continue
             if parse_fn is not None:  # should return the expected number of coordinates with valid type
                 coords = parse_fn(line, sep)
