@@ -3,6 +3,8 @@ from PIL.Image import fromarray
 from PIL.ImageDraw import ImageDraw
 from shapely.geometry import Polygon, Point
 
+from export_util import draw_poly
+
 
 def draw_square(image, side, center, color):
     """Draw a square centered in 'center' and of which the side has 'side'"""
@@ -33,13 +35,3 @@ def draw_circle(image, radius, center, color=255, return_circle=False):
     else:
         return image_out
 
-
-def draw_poly(image, polygon, color=255):
-    """Draw a polygon in the given color at the given location"""
-    pil_image = fromarray(image)
-    validated_color = color
-    draw = ImageDraw(pil_image)
-    if len(image.shape) > 2 and image.shape[2] > 1:
-        validated_color = tuple(color)
-    draw.polygon(polygon.boundary.coords, fill=validated_color, outline=validated_color)
-    return np.asarray(pil_image)
