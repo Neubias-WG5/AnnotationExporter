@@ -4,7 +4,7 @@ import numpy as np
 from shapely import wkt
 
 from annotation_exporter import mask_to_objects_2d, mask_to_objects_3d
-from shapely.geometry import Polygon, box
+from shapely.geometry import Polygon, box, LineString
 
 from tests.util import draw_square_by_corner, draw_poly
 
@@ -134,6 +134,17 @@ class TestMaskToObject2D(TestCase):
         self.assertEqual(len(slices), 2)
         self.assertTrue(slices[0].polygon.equals(p1))
         self.assertTrue(slices[1].polygon.equals(p2))
+
+    def testTwoPoints(self):
+        mask = np.array([
+            [0, 0, 0, 0],
+            [0, 1, 1, 0],
+            [0, 0, 0, 0]
+        ])
+        polygon = LineString([(1, 1), (2, 1)])
+        slices = mask_to_objects_2d(mask)
+        self.assertEqual(len(slices), 1)
+        self.assertTrue(slices[0].polygon.equals(polygon))
 
 
 class TestMaskToObject3D(TestCase):

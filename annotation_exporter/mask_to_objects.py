@@ -233,6 +233,8 @@ def get_polygon_inner_point(polygon):
     """
     if isinstance(polygon, Point):
         return int(polygon.x), int(polygon.y)
+    if isinstance(polygon, LineString):
+        return [int(c) for c in polygon.coords[0]]
     # this function works whether or not the boundary is inside or outside (one pixel around) the
     # object boundary in the mask
     exterior = polygon.exterior.coords
