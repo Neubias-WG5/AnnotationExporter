@@ -1,6 +1,7 @@
 from unittest import TestCase
 
 import numpy as np
+from shapely import wkt
 
 from annotation_exporter import mask_to_objects_2d, mask_to_objects_3d
 from shapely.geometry import Polygon, box
@@ -97,6 +98,42 @@ class TestMaskToObject2D(TestCase):
         self.assertEqual(len(slices), 2)
         self.assertEqual(slices[0].label, 255)
         self.assertEqual(slices[1].label, 127)
+
+    def testStandalonePixels(self):
+        mask = np.array([
+            [0, 0, 0, 0, 0],
+            [0, 1, 1, 0, 0],
+            [0, 0, 1, 0, 0],
+            [0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 0]
+        ])
+
+        rotated = [
+            (mask, Polygon([(1, 1), (2, 2), (2, 1), (1, 1)])),
+            (mask[::-1, :], Polygon([(2, 2), (1, 3), (2, 3), (2, 2)])),
+            (mask[:, ::-1], Polygon([(2, 1), (2, 2), (3, 1), (2, 1)])),
+            (mask[::-1, ::-1], Polygon([(2, 2), (2, 3), (3, 3), (2, 2)]))
+        ]
+
+        for m, p in rotated:
+            slices = mask_to_objects_2d(m)
+            self.assertEqual(len(slices), 1)
+            self.assertTrue(slices[0].polygon.equals(p))
+
+    def testOtherPixels(self):
+        mask = np.array([
+            [0, 0, 0, 0, 0, 0],
+            [0, 1, 1, 0, 1, 1],
+            [0, 0, 1, 0, 1, 0],
+            [0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0]
+        ])
+        p1 = Polygon([(1, 1), (2, 2), (2, 1), (1, 1)])
+        p2 = Polygon([(4, 1), (4, 2), (5, 1), (4, 1)])
+        slices = mask_to_objects_2d(mask)
+        self.assertEqual(len(slices), 2)
+        self.assertTrue(slices[0].polygon.equals(p1))
+        self.assertTrue(slices[1].polygon.equals(p2))
 
 
 class TestMaskToObject3D(TestCase):

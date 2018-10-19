@@ -3,7 +3,7 @@ from warnings import warn
 
 import cv2
 import numpy as np
-from shapely.geometry import Polygon, MultiPolygon
+from shapely.geometry import Polygon, MultiPolygon, Point, LineString
 from shapely.validation import explain_validity
 from shapely.affinity import affine_transform
 from skimage.measure import points_in_poly, label as label_fn
@@ -101,6 +101,56 @@ def fix_geometry(geometry):
         return None
 
 
+def clean_mask(mask, background=0):
+    """Remove ill-structured objects from a mask which prevent conversion to valid polygons.
+
+    Parameters
+    ----------
+    mask: ndarray (2d)
+        The mask to remove
+    background: int
+        Value of the background
+
+    Returns
+    -------
+    mask: ndarray
+        Cleaned mask
+
+    Notes
+    -----
+    Example of ill-structured mask (caused by pixel 2)
+
+    0 0 0 0 0
+    0 1 1 0 0
+    0 0 1 0 0
+    0 0 0 2 0
+    0 0 0 0 0
+    """
+    kernels = [
+        np.array([[ 1, -1, -1], [-1,  1, -1], [-1, -1, -1]]),  # top left standalone pixel
+        np.array([[-1, -1,  1], [-1,  1, -1], [-1, -1, -1]]),  # top right standalone pixel
+        np.array([[-1, -1, -1], [-1,  1, -1], [ 1, -1, -1]]),  # bottom left standalone pixel
+        np.array([[-1, -1, -1], [-1,  1, -1], [-1, -1,  1]])   # bottom right standalone pixel
+    ]
+
+    proc_masks = [cv2.morphologyEx(mask, cv2.MORPH_HITMISS, kernel).astype(np.bool) for kernel in kernels]
+
+    for proc_mask in proc_masks:
+        mask[proc_mask] = background
+    return mask
+
+
+def flatten_geoms(geoms):
+    """Flatten (possibly nested) multipart geometry."""
+    geometries = []
+    for g in geoms:
+        if hasattr(g, "geoms"):
+            geometries.extend(flatten_geoms(g))
+        else:
+            geometries.append(g)
+    return geometries
+
+
 def _locate(segmented, offset=None):
     """Inspired from: https://goo.gl/HYPrR1"""
     # CV_RETR_EXTERNAL to only get external contours.
@@ -135,14 +185,18 @@ def _locate(segmented, offset=None):
                         subs_remaining = False
 
             # add component tuple to components only if exterior is a polygon
-            if len(exterior) > 2:
+            if len(exterior) == 1:
+                components.append(Point(exterior[0]))
+            elif len(exterior) == 2:
+                components.append(LineString(exterior))
+            elif len(exterior) > 2:
                 polygon = Polygon(exterior, interiors)
                 polygon = transform(polygon)
                 if polygon.is_valid:  # some polygons might be invalid
                     components.append(polygon)
                 else:
                     fixed = fix_geometry(polygon)
-                    if fixed.is_valid:
+                    if fixed.is_valid and not fixed.is_empty:
                         components.append(fixed)
                     else:
                         warn("Attempted to fix invalidity '{}' in polygon but failed... "
@@ -177,6 +231,8 @@ def get_polygon_inner_point(polygon):
     point: tuple
         (x, y) coordinates for the found points. x and y are integers.
     """
+    if isinstance(polygon, Point):
+        return int(polygon.x), int(polygon.y)
     # this function works whether or not the boundary is inside or outside (one pixel around) the
     # object boundary in the mask
     exterior = polygon.exterior.coords
@@ -200,7 +256,7 @@ def neighbour_pixels(x, y):
 
 
 def mask_to_objects_2d(mask, background=0, offset=None):
-    """Convert 2D (binary or label) mask to polygons.
+    """Convert 2D (binary or label) mask to polygons. Generates borders fitting in the objects.
 
     Parameters
     ----------
@@ -223,15 +279,16 @@ def mask_to_objects_2d(mask, background=0, offset=None):
     # opencv only supports contour extraction for binary masks: clean mask and binarize
     mask_cpy = np.zeros(mask.shape, dtype=np.uint8)
     mask_cpy[mask != background] = 255
-    # create artificial separation between adjacent touching each other
+    # create artificial separation between adjacent touching each other + clean
     contours = dilation(mask, square(3)) - mask
     mask_cpy[np.logical_and(contours > 0, mask > 0)] = background
+    mask_cpy = clean_mask(mask_cpy, background=background)
     # extract polygons and labels
     polygons = _locate(mask_cpy, offset=offset)
     objects = list()
     for polygon in polygons:
         # loop for handling multipart geometries
-        for curr in polygon.geoms if hasattr(polygon, "geoms") else [polygon]:
+        for curr in flatten_geoms(polygon.geoms) if hasattr(polygon, "geoms") else [polygon]:
             x, y = get_polygon_inner_point(curr)
             objects.append(AnnotationSlice(polygon=curr, label=mask[y - offset[1], x - offset[0]]))
     return objects
